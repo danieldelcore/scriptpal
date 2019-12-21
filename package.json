@@ -1,0 +1,32 @@
+{
+  "name": "scriptpal",
+  "version": "1.0.0",
+  "description": "A simple npm script palette for lazy people (like me)",
+  "main": "./bin/index.js",
+  "bin": {
+    "scriptpal": "./bin/index.js"
+  },
+  "scripts": {
+    "start": "node ./bin/index",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Daniel Del Core",
+  "license": "MIT",
+  "keywords": [
+    "list",
+    "ls",
+    "npm-ls",
+    "palette",
+    "command",
+    "picker",
+    "search",
+    "script"
+  ],
+  "dependencies": {
+    "chalk": "^3.0.0",
+    "clipboardy": "^2.1.0",
+    "enquirer": "^2.3.2",
+    "gradient-string": "^1.2.0",
+    "meow": "^6.0.0"
+  }
+}
