@@ -10,6 +10,10 @@ A simple npm script palette for lazy people (like me), who want a quick way to l
 - autocompletion
 - fussy finding
 
+<p align="center">
+  <img width="580" src="assets/demo.gif" alt="Demo">
+</p>
+
 ## Install ⬇️
 
 Install globally
