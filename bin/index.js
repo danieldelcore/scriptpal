@@ -9,8 +9,6 @@ const welcome = require("./welcome");
 const { getPackageJson, hasFile } = require("./file-manager");
 
 async function main(input, flags) {
-  console.log(input, flags);
-
   if (!flags.nowelcome) {
     welcome();
   }
