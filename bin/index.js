@@ -20,12 +20,18 @@ async function main(input, flags) {
       name: "flavor",
       message: "Which script would you like to run? 🤷‍♂️",
       limit: 18,
+      multiple: true,
       choices: Object.keys(packageJson.scripts)
     });
 
-    const script = await prompt.run();
+    const scripts = await prompt.run();
     const packageManager = hasFile("yarn.lock") ? "yarn" : "npm run";
-    const command = `${packageManager} ${script}`;
+
+    const command = scripts.reduce((accum, script, index) => {
+      const nextScript = `${packageManager} ${script}`;
+
+      return index > 0 ? `${accum} && ${nextScript}` : nextScript;
+    }, "");
 
     await clipboardy.write(command);
 
