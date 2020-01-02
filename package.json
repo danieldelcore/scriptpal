@@ -11,6 +11,10 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Daniel Del Core",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/danieldelcore/scriptpal.git"
+  },
   "license": "MIT",
   "keywords": [
     "list",
