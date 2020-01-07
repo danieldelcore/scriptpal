@@ -12,7 +12,7 @@ const { getPackageJson, hasFile } = require("./file-manager");
 async function main(input, flags) {
   if (!flags.nowelcome) welcome();
 
-  const packageJson = await getPackageJson("package.json");
+  const packageJson = getPackageJson();
   const prompt = new AutoComplete({
     name: "flavor",
     message: "Which script would you like to run? 🤷‍♂️",

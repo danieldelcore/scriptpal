@@ -30,6 +30,7 @@
     "chalk": "^3.0.0",
     "clipboardy": "^2.1.0",
     "enquirer": "^2.3.2",
+    "find-config": "^1.0.0",
     "gradient-string": "^1.2.0",
     "meow": "^6.0.0"
   }
