@@ -9,9 +9,7 @@ const welcome = require("./welcome");
 const { getPackageJson, hasFile } = require("./file-manager");
 
 async function main(input, flags) {
-  if (!flags.nowelcome) {
-    welcome();
-  }
+  if (!flags.nowelcome) welcome();
 
   try {
     const packageJson = await getPackageJson("package.json");
@@ -42,17 +40,17 @@ async function main(input, flags) {
 
 const cli = meow(
   `
-	Usage
-	  $ scriptpal
+  Usage
+    $ scriptpal
 
-	Options
-	  --nowelcome, -n  Omit welcome message
-	  --help  Help me
-	  --version, -v  Version number
+  Options
+    --nowelcome, -n  Omit welcome message
+    --help  Help me
+    --version, -v  Version number
 
-	Examples
-	  $ scriptpal --nowelcome
-	  $ npx scriptpal
+  Examples
+    $ scriptpal --nowelcome
+    $ npx scriptpal
 `,
   {
     flags: {
