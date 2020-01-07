@@ -9,9 +9,9 @@ const readFile = promisify(fs.readFile);
 
 function getPackageJson(path) {
   if (!hasFile(path)) {
-    throw `${chalk.red("Error:")} ${chalk.bgRed(path)} ${chalk.red(
+    throw new Error(`${chalk.red("Error:")} ${chalk.bgRed(path)} ${chalk.red(
       "not found"
-    )}`;
+    )}\n`);
   }
 
   return readFile(path).then(rawdata => JSON.parse(rawdata));
