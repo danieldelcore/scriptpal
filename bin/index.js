@@ -2,7 +2,7 @@
 "use strict";
 
 const { spawnSync } = require('child_process');
-const { prompt, AutoComplete } = require("enquirer");
+const { AutoComplete, Snippet } = require("enquirer");
 const clipboardy = require("clipboardy");
 const meow = require("meow");
 
@@ -13,22 +13,34 @@ async function main(input, flags) {
   if (!flags.nowelcome) welcome();
 
   const packageJson = getPackageJson();
-  const prompt = new AutoComplete({
-    name: "flavor",
-    message: "Which script would you like to run? 🤷‍♂️",
-    limit: 18,
-    choices: Object.keys(packageJson.scripts)
-  });
 
   try {
-    const script = await prompt.run();
+    const script = await new AutoComplete({
+      name: "flavor",
+      message: "Which script would you like to run? 🤷‍♂️",
+      limit: 18,
+      choices: Object.keys(packageJson.scripts)
+    }).run();
+
+    const { values: { parameters } } = await new Snippet({
+      name: 'command',
+      message: 'Would you like to add parameters?',
+      required: false,
+      fields: [{
+        name: 'parameters',
+        message: 'parameters'
+      }],
+      template: `${script} \${parameters}`
+    }).run();
+
     const packageManager = hasFile("yarn.lock") ? "yarn" : "npm run";
 
     if (flags.clipboard) {
-      await clipboardy.write(`${packageManager} ${script}`);
+      await clipboardy.write(`${packageManager} ${script} ${parameters || ''}`);
       console.log("Copied to clipboard 👉 📋");
     } else {
-      spawnSync(packageManager, [script], { stdio: "inherit" });
+      const args = !parameters ? [script] : [script, parameters];
+      spawnSync(packageManager, args, { stdio: "inherit" });
     }
   } catch (error) {
     if (error) {
