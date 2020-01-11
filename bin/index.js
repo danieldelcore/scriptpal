@@ -32,13 +32,16 @@ async function main(input, flags) {
     template: `${script} \${parameters}`
   }).run();
 
-  const packageManager = hasFile("yarn.lock") ? "yarn" : "npm run";
+  const isYarn = hasFile("yarn.lock");
+  const packageManager = isYarn ? "yarn" : "npm";
+  let args = !isYarn ? ['run', script] : [script];
+
+  args = parameters ? [...args, parameters] : args;
 
   if (flags.clipboard) {
-    await clipboardy.write(`${packageManager} ${script} ${parameters || ''}`);
+    await clipboardy.write(`${packageManager} ${args.join(' ')}`);
     console.log("Copied to clipboard 👉 📋");
   } else {
-    const args = !parameters ? [script] : [script, parameters.split(' ')];
     const spawn = spawnSync(packageManager, args, { stdio: "inherit" });
 
     if (spawn.error) {
