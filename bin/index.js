@@ -14,37 +14,35 @@ async function main(input, flags) {
 
   const packageJson = getPackageJson();
 
-  try {
-    const script = await new AutoComplete({
-      name: "flavor",
-      message: "Which script would you like to run? 🤷‍♂️",
-      limit: 18,
-      choices: Object.keys(packageJson.scripts)
-    }).run();
+  const script = await new AutoComplete({
+    name: "flavor",
+    message: "Which script would you like to run? 🤷‍♂️",
+    limit: 18,
+    choices: Object.keys(packageJson.scripts)
+  }).run();
 
-    const { values: { parameters } } = await new Snippet({
-      name: 'command',
-      message: 'Would you like to add parameters?',
-      required: false,
-      fields: [{
-        name: 'parameters',
-        message: 'parameters'
-      }],
-      template: `${script} \${parameters}`
-    }).run();
+  const { values: { parameters } } = await new Snippet({
+    name: 'command',
+    message: 'Would you like to add parameters?',
+    required: false,
+    fields: [{
+      name: 'parameters',
+      message: 'parameters'
+    }],
+    template: `${script} \${parameters}`
+  }).run();
 
-    const packageManager = hasFile("yarn.lock") ? "yarn" : "npm run";
+  const packageManager = hasFile("yarn.lock") ? "yarn" : "npm run";
 
-    if (flags.clipboard) {
-      await clipboardy.write(`${packageManager} ${script} ${parameters || ''}`);
-      console.log("Copied to clipboard 👉 📋");
-    } else {
-      const args = !parameters ? [script] : [script, parameters];
-      spawnSync(packageManager, args, { stdio: "inherit" });
-    }
-  } catch (error) {
-    if (error) {
-      console.error(error, "🙅‍♂️");
+  if (flags.clipboard) {
+    await clipboardy.write(`${packageManager} ${script} ${parameters || ''}`);
+    console.log("Copied to clipboard 👉 📋");
+  } else {
+    const args = !parameters ? [script] : [script, parameters.split(' ')];
+    const spawn = spawnSync(packageManager, args, { stdio: "inherit" });
+
+    if (spawn.error) {
+      console.error(spawn.error);
       return 1;
     }
   }
