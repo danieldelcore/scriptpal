@@ -4,7 +4,7 @@
 
 # ScriptPal 🤘
 
-A simple npm script palette for lazy people (like me), who want a quick way to look through and pick npm scripts!
+A simple npm script palette for lazy people who want a quick way to look through and pick npm scripts!
 
 - keyboard navigation
 - autocompletion
