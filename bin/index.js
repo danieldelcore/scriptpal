@@ -5,7 +5,7 @@ const { spawnSync } = require('child_process');
 const { AutoComplete, Snippet } = require("enquirer");
 const clipboardy = require("clipboardy");
 const meow = require("meow");
-
+const Conf = require('conf');
 const welcome = require("./welcome");
 const { getPackageJson, hasFile } = require("./file-manager");
 
@@ -13,16 +13,25 @@ async function main(input, flags) {
   if (!flags.nowelcome) welcome();
 
   const packageJson = getPackageJson();
+  const choices = Object.keys(packageJson.scripts);
+  const config = new Conf();
+  const previous = config.get('previous');
+
+  let initial = (previous && choices[previous.index] === previous.command)
+    ? previous.index
+    : 0;
 
   const script = await new AutoComplete({
-    name: "flavor",
+    name: "scripts",
     message: "Which script would you like to run? 🤷‍♂️",
     limit: 18,
-    choices: Object.keys(packageJson.scripts)
+    // Choices array is modified
+    choices: [...choices],
+    initial,
   }).run();
 
   const { values: { parameters } } = await new Snippet({
-    name: 'command',
+    name: 'parameters',
     message: 'Would you like to add parameters?',
     required: false,
     fields: [{
@@ -32,6 +41,7 @@ async function main(input, flags) {
     template: `${script} \${parameters}`
   }).run();
 
+  const scriptIndex = choices.indexOf(script);
   const isYarn = hasFile("yarn.lock");
   const packageManager = isYarn ? "yarn" : "npm";
   let args = !isYarn ? ['run', script] : [script];
@@ -49,6 +59,12 @@ async function main(input, flags) {
       return 1;
     }
   }
+
+  config.set('previous', {
+    command: script,
+    parameters,
+    index: scriptIndex,
+  });
 }
 
 const cli = meow(`
@@ -58,6 +74,7 @@ const cli = meow(`
   Options
     --nowelcome, -n  Omit welcome message
     --help  Help me
+    --last, -l  Run previous command
     --version, -v  Version number
     --clipboard, -c Copy command to clipboard
 
