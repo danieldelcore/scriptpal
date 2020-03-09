@@ -22,7 +22,7 @@ Install globally
 npm install -g scriptpal
 ```
 
-## Get started 🏁
+## Usage 🏁
 
 ```bash
 scriptpal
@@ -33,3 +33,17 @@ Usage with npx
 ```bash
 npx scriptpal
 ```
+
+## API 🤖
+
+- `--nowelcome`, `-n` Omit welcome message
+- `--last`, `-l` Run previous command
+- `--version`, `-v` Version number
+- `--clipboard`, `-c` Copy command to clipboard
+- `--help` Help me 🙏
+
+## Examples
+
+- `$ scriptpal --nowelcome`
+- `$ npx scriptpal`
+- `$ scriptpal --last --preset="emoji"`

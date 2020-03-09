@@ -8,7 +8,7 @@
   },
   "scripts": {
     "start": "node ./bin/index",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\""
   },
   "author": "Daniel Del Core",
   "repository": {
@@ -29,6 +29,7 @@
   "dependencies": {
     "chalk": "^3.0.0",
     "clipboardy": "^2.1.0",
+    "conf": "^6.2.1",
     "enquirer": "^2.3.2",
     "find-config": "^1.0.0",
     "gradient-string": "^1.2.0",
