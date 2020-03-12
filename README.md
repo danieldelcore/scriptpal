@@ -47,3 +47,8 @@ npx scriptpal
 - `$ scriptpal --nowelcome`
 - `$ npx scriptpal`
 - `$ scriptpal --last --preset="emoji"`
+
+## You might also like...
+
+- [CommitPal](https://github.com/zeropoly/commitpal): A delightful CLI tool for building complex commit messages
+- [Enquirer](https://github.com/enquirer/enquirer): Stylish, intuitive and user-friendly prompts
