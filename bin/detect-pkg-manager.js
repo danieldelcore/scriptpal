@@ -19,7 +19,7 @@ function getPackageManager() {
     }
   }
 
-  return packageManagers[largest] || "npm";
+  return (largest && largest.id) || "npm";
 }
 
 module.exports = { getPackageManager };
