@@ -11,41 +11,42 @@ const chalk = require("chalk");
 const welcome = require("./welcome");
 const { getPackageJson, hasFile } = require("./file-manager");
 
-const promptShouldRerunPrevious = async previous => {
-  const previousCommand = `${previous.script} ${previous.parameters ||
-    ""}`.trim();
+const promptShouldRerunPrevious = async (previous) => {
+  const previousCommand = `${previous.script} ${
+    previous.parameters || ""
+  }`.trim();
 
   return await new Confirm({
     message: `Would you like to rerun the previous command?\n${chalk.greenBright(
       previousCommand
-    )}`
+    )}`,
   }).run();
 };
 
-const promptGetCommand = async choices => {
+const promptGetCommand = async (choices) => {
   const script = await new AutoComplete({
     message: "Which script would you like to run? 🤷‍♂️",
     limit: 18,
-    choices
+    choices,
   }).run();
 
   const {
-    values: { parameters }
+    values: { parameters },
   } = await new Snippet({
     message: "Would you like to add parameters?",
     required: false,
     fields: [
       {
         name: "parameters",
-        message: "parameters"
-      }
+        message: "parameters",
+      },
     ],
-    template: `${script} \${parameters}`
+    template: `${script} \${parameters}`,
   }).run();
 
   return {
     script,
-    parameters
+    parameters,
   };
 };
 
@@ -82,19 +83,16 @@ async function main(input, flags) {
   if (flags.clipboard) {
     await clipboardy.write(`${packageManager} ${args.join(" ")}`);
     console.log("Copied to clipboard 👉 📋");
-  } else {
-    const spawn = spawnSync(packageManager, args, { stdio: "inherit" });
-
-    if (spawn.error) {
-      console.error(spawn.error);
-      return 1;
-    }
+    return 0;
   }
 
-  config.set(`${process.cwd()}.previous`, {
-    script,
-    parameters
-  });
+  const spawn = spawnSync(packageManager, args, { stdio: "inherit" });
+
+  if (spawn.error) {
+    throw new Error(spawn.error);
+  }
+
+  config.set(`${process.cwd()}.previous`, { script, parameters });
 }
 
 const cli = meow(
@@ -103,11 +101,11 @@ const cli = meow(
     $ scriptpal
 
   Options
-    --nowelcome, -n  Omit welcome message
-    --help  Help me
     --last, -l  Run previous command
-    --version, -v  Version number
     --clipboard, -c Copy command to clipboard
+    --nowelcome, -n  Omit welcome message
+    --version Version number
+    --help  Help me
 
   Examples
     $ scriptpal --nowelcome
@@ -118,18 +116,26 @@ const cli = meow(
     flags: {
       nowelcome: {
         type: "boolean",
-        alias: "n"
+        alias: "n",
       },
       clipboard: {
         type: "boolean",
-        alias: "c"
+        alias: "c",
       },
       last: {
         type: "boolean",
-        alias: "l"
-      }
-    }
+        alias: "l",
+      },
+    },
   }
 );
 
-main(cli.input[0], cli.flags);
+(async () => {
+  try {
+    await main(cli.input[0], cli.flags);
+  } catch (error) {
+    console.error(chalk.red(error));
+    console.log(error);
+    process.exit(1);
+  }
+})();

@@ -8,7 +8,7 @@ A simple npm script palette for lazy people who want a quick way to look through
 
 - keyboard navigation
 - autocompletion
-- fussy finding
+- fuzzy finding
 
 <p align="center">
   <img width="580" src="assets/demo.gif" alt="Demo">
