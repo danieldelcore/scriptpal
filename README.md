@@ -42,13 +42,26 @@ npx scriptpal
 - `--clipboard`, `-c` Copy command to clipboard
 - `--help` Help me 🙏
 
+### Subcommands
+
+`list` List all scripts found in local `package.json`.
+
+It's possible to also run arbitrary scripts from your `package.json` by passing them as sub-commands, similar to `yarn`.
+
+For example: `scriptpal test` will run `npm run test`.
+
+```bash
+
 ## Examples
 
 - `$ scriptpal --nowelcome`
 - `$ npx scriptpal`
 - `$ scriptpal --last --preset="emoji"`
+- `$ scriptpal list`
+- `$ scriptpal start`
 
 ## You might also like...
 
 - [CommitPal](https://github.com/zeropoly/commitpal): A delightful CLI tool for building complex commit messages
 - [Enquirer](https://github.com/enquirer/enquirer): Stylish, intuitive and user-friendly prompts
+```

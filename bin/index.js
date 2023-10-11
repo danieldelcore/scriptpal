@@ -2,7 +2,6 @@
 "use strict";
 
 const { spawnSync } = require("child_process");
-const { AutoComplete, Snippet, Confirm } = require("enquirer");
 const clipboardy = require("clipboardy");
 const Conf = require("conf");
 const chalk = require("chalk");
@@ -10,53 +9,35 @@ const { Command, Option, CommanderError } = require("commander");
 
 const { version } = require("../package.json");
 const welcome = require("./welcome");
-const { getPackageJson, hasFile } = require("./file-manager");
+const { getPackageJson } = require("./file-manager");
+const { promptShouldRerunPrevious, promptGetCommand } = require("./prompts");
+const { getPackageManager } = require("./detect-pkg-manager");
 
-const promptShouldRerunPrevious = async (previous) => {
-  const previousCommand = `${previous.script} ${
-    previous.parameters || ""
-  }`.trim();
+let packageJson;
 
-  return await new Confirm({
-    message: `Would you like to rerun the previous command?\n${chalk.greenBright(
-      previousCommand
-    )}`,
-  }).run();
-};
+try {
+  packageJson = getPackageJson();
 
-const promptGetCommand = async (choices) => {
-  const script = await new AutoComplete({
-    message: "Which script would you like to run? 🤷‍♂️",
-    limit: 18,
-    choices,
-  }).run();
+  if (!packageJson.scripts) {
+    throw new Error(chalk.red('No "scripts" found in package.json'));
+  }
+} catch (error) {
+  console.error(error);
+  process.exit(1);
+}
 
-  const {
-    values: { parameters },
-  } = await new Snippet({
-    message: "Would you like to add parameters?",
-    required: false,
-    fields: [
-      {
-        name: "parameters",
-        message: "parameters",
-      },
-    ],
-    template: `${script} \${parameters}`,
-  }).run();
+function spawnScript(pkgManager, args) {
+  const spawn = spawnSync(pkgManager, args, { stdio: "inherit" });
 
-  return {
-    script,
-    parameters,
-  };
-};
+  if (spawn.error) {
+    throw new Error(spawn.error);
+  }
+}
 
 async function main(flags) {
   if (!flags.nowelcome) welcome();
 
-  const packageJson = getPackageJson();
   const choices = Object.keys(packageJson.scripts);
-
   const config = new Conf();
   const previous = config.get(`${process.cwd()}.previous`);
 
@@ -75,25 +56,26 @@ async function main(flags) {
       ? previous
       : await promptGetCommand(choices);
 
-  const isYarn = hasFile("yarn.lock");
-  const packageManager = isYarn ? "yarn" : "npm";
-  let args = !isYarn ? ["run", script] : [script];
-
+  const pkgManager = getPackageManager();
+  let args = !pkgManager === "npm" ? ["run", script] : [script];
   args = parameters ? [...args, parameters] : args;
 
   if (flags.clipboard) {
-    await clipboardy.write(`${packageManager} ${args.join(" ")}`);
+    await clipboardy.write(`${pkgManager} ${args.join(" ")}`);
     console.log("Copied to clipboard 👉 📋");
     return 0;
   }
 
-  const spawn = spawnSync(packageManager, args, { stdio: "inherit" });
-
-  if (spawn.error) {
-    throw new Error(spawn.error);
-  }
+  spawnScript(pkgManager, args);
 
   config.set(`${process.cwd()}.previous`, { script, parameters });
+}
+
+async function runLocalScript(script) {
+  const pkgManager = getPackageManager();
+  const args = !pkgManager === "npm" ? ["run", script] : [script];
+
+  spawnScript(pkgManager, args);
 }
 
 async function list() {
@@ -130,6 +112,19 @@ program
   .command("list")
   .description("List available scripts from package.json")
   .action(() => list());
+
+// console.log(packageJson.scripts);
+Object.keys(packageJson.scripts)
+  .filter((script) => !["list"].includes(script))
+  .forEach((script) => {
+    program
+      .usage("[global options] <file-paths>...")
+      .command(script)
+      .description(
+        `Runs local script "${script}" detected in local package.json`
+      )
+      .action(() => runLocalScript(script));
+  });
 
 (async () => {
   try {

@@ -6,9 +6,7 @@ const findConfig = require("find-config");
 
 function getPackageJson(path = "package.json") {
   if (!hasFile(path)) {
-    throw new Error(`${chalk.bgRed(path)} ${chalk.red(
-      "not found"
-    )}\n`);
+    throw new Error(`${chalk.bgRed(path)} ${chalk.red("not found")}\n`);
   }
 
   const configRaw = findConfig.read(path);
@@ -26,5 +24,5 @@ function hasFile(path) {
 
 module.exports = {
   getPackageJson,
-  hasFile
+  hasFile,
 };

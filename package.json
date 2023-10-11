@@ -4,7 +4,8 @@
   "description": "A simple npm script palette for lazy people (like me)",
   "main": "./bin/index.js",
   "bin": {
-    "scriptpal": "./bin/index.js"
+    "scriptpal": "./bin/index.js",
+    "spal": "./bin/index.js"
   },
   "scripts": {
     "start": "node ./bin/index",
