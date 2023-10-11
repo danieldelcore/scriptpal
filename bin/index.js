@@ -4,10 +4,11 @@
 const { spawnSync } = require("child_process");
 const { AutoComplete, Snippet, Confirm } = require("enquirer");
 const clipboardy = require("clipboardy");
-const meow = require("meow");
 const Conf = require("conf");
 const chalk = require("chalk");
+const { Command, Option, CommanderError } = require("commander");
 
+const { version } = require("../package.json");
 const welcome = require("./welcome");
 const { getPackageJson, hasFile } = require("./file-manager");
 
@@ -50,7 +51,7 @@ const promptGetCommand = async (choices) => {
   };
 };
 
-async function main(input, flags) {
+async function main(flags) {
   if (!flags.nowelcome) welcome();
 
   const packageJson = getPackageJson();
@@ -95,47 +96,46 @@ async function main(input, flags) {
   config.set(`${process.cwd()}.previous`, { script, parameters });
 }
 
-const cli = meow(
-  `
-  Usage
-    $ scriptpal
+async function list() {
+  const packageJson = getPackageJson();
+  Object.entries(packageJson.scripts).forEach(([key, value]) => {
+    console.log(`· ${chalk.greenBright(key)}: ${value}`);
+  });
+}
 
-  Options
-    --last, -l  Run previous command
-    --clipboard, -c Copy command to clipboard
-    --nowelcome, -n  Omit welcome message
-    --version Version number
-    --help  Help me
+const program = new Command();
 
-  Examples
-    $ scriptpal --nowelcome
-    $ npx scriptpal
-    $ scriptpal --last --preset="emoji"
-`,
-  {
-    flags: {
-      nowelcome: {
-        type: "boolean",
-        alias: "n",
-      },
-      clipboard: {
-        type: "boolean",
-        alias: "c",
-      },
-      last: {
-        type: "boolean",
-        alias: "l",
-      },
-    },
-  }
-);
+program
+  .enablePositionalOptions()
+  .name("scriptpal")
+  .version(version, "-v, --version")
+  .option("-l, --last", "Run previous command")
+  .option("-c, --clipboard", "Copy command to clipboard")
+  .option("-n, --nowelcome", "Omit welcome message")
+  .addHelpText(
+    "after",
+    `
+Examples
+  $ scriptpal --last
+  $ scriptpal --clipboard
+  $ scriptpal --last --clipboard
+  $ scriptpal -lcn
+  $ scriptpal --nowelcome
+  $ npx scriptpal
+  $ scriptpal --last --preset="emoji"`
+  )
+  .action(async (options) => await main(options));
+
+program
+  .command("list")
+  .description("List available scripts from package.json")
+  .action(() => list());
 
 (async () => {
   try {
-    await main(cli.input[0], cli.flags);
+    await program.parseAsync(process.argv);
   } catch (error) {
     console.error(chalk.red(error));
-    console.log(error);
     process.exit(1);
   }
 })();
