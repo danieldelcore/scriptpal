@@ -66,9 +66,9 @@ async function main(flags) {
     return 0;
   }
 
-  spawnScript(pkgManager, args);
-
   config.set(`${process.cwd()}.previous`, { script, parameters });
+
+  spawnScript(pkgManager, args);
 }
 
 async function runLocalScript(script) {
