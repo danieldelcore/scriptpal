@@ -50,8 +50,6 @@ It's possible to also run arbitrary scripts from your `package.json` by passing 
 
 For example: `scriptpal test` will run `npm run test`.
 
-```bash
-
 ## Examples
 
 - `$ scriptpal --nowelcome`
@@ -64,4 +62,3 @@ For example: `scriptpal test` will run `npm run test`.
 
 - [CommitPal](https://github.com/zeropoly/commitpal): A delightful CLI tool for building complex commit messages
 - [Enquirer](https://github.com/enquirer/enquirer): Stylish, intuitive and user-friendly prompts
-```
