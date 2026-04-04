@@ -9,6 +9,8 @@
   },
   "scripts": {
     "start": "node ./bin/index",
+    "changeset": "changeset",
+    "release": "changeset publish",
     "test": "echo \"Error: no test specified\""
   },
   "author": "Daniel Del Core",
@@ -35,5 +37,8 @@
     "enquirer": "^2.3.2",
     "find-config": "^1.0.0",
     "gradient-string": "^1.2.0"
+  },
+  "devDependencies": {
+    "@changesets/cli": "^2.30.0"
   }
 }
