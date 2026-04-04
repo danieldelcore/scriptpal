@@ -1,17 +1,31 @@
+name: Release
+
+permissions:
+  contents: write
+  pull-requests: write
+  id-token: write # Required for Trusted Publishing
+
+on:
+  push:
+    branches:
+      - master
+
 jobs:
   release:
     runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22.x
+          node-version: 24.x
           registry-url: "https://registry.npmjs.org"
-      - run: npm install -g npm@latest # Ensure OIDC support
-      - run: npm install
+      - run: npm ci
       - name: Create Release Pull Request or Publish
         uses: changesets/action@v1
         with:
-          publish: npm release
+          publish: npm run release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
