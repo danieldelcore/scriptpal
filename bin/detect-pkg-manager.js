@@ -8,18 +8,19 @@ function getPackageManager() {
     { id: "npm", file: hasFile("package-lock.json") },
   ];
 
-  let largest = packageManagers[0];
+  const foundPackageManagers = packageManagers.filter(
+    (manager) => typeof manager.file === "string",
+  );
 
-  for (let i = 0; i < packageManagers.length; i++) {
-    if (
-      packageManagers[i].file &&
-      packageManagers[i].file.split("/").length > largest
-    ) {
-      largest = i;
-    }
+  if (!foundPackageManagers.length) {
+    return "npm";
   }
 
-  return (largest && largest.id) || "npm";
+  const closestPackageManager = foundPackageManagers.sort(
+    (a, b) => b.file.split("/").length - a.file.split("/").length,
+  )[0];
+
+  return closestPackageManager.id;
 }
 
 module.exports = { getPackageManager };

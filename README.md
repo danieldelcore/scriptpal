@@ -42,7 +42,7 @@ npx scriptpal
 - `--clipboard`, `-c` Copy command to clipboard
 - `--help` Help me 🙏
 
-### Subcommands
+## `list`
 
 `list` List all scripts found in local `package.json`.
 
@@ -52,11 +52,10 @@ For example: `scriptpal test` will run `npm run test`.
 
 ## Examples
 
-- `$ scriptpal --nowelcome`
-- `$ npx scriptpal`
-- `$ scriptpal --last --preset="emoji"`
-- `$ scriptpal list`
-- `$ scriptpal start`
+- `$ scriptpal` => Shows a prompt containing a list of npm scripts from the closest `package.json`.
+- `$ scriptpal --last` => Runs the previous command
+- `$ scriptpal list` => Prints all npm scripts from the closest `package.json`.
+- `$ scriptpal start` => Runs `npm run start`. Can be used with other scripts as well.
 
 ## You might also like...
 

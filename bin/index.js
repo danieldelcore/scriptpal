@@ -5,7 +5,7 @@ const { spawnSync } = require("child_process");
 const clipboardy = require("clipboardy");
 const Conf = require("conf");
 const chalk = require("chalk");
-const { Command, Option, CommanderError } = require("commander");
+const { Command } = require("commander");
 
 const { version } = require("../package.json");
 const welcome = require("./welcome");
@@ -13,31 +13,32 @@ const { getPackageJson } = require("./file-manager");
 const { promptShouldRerunPrevious, promptGetCommand } = require("./prompts");
 const { getPackageManager } = require("./detect-pkg-manager");
 
-let packageJson;
-
-try {
-  packageJson = getPackageJson();
+function getPackageScripts() {
+  const packageJson = getPackageJson();
 
   if (!packageJson.scripts) {
     throw new Error(chalk.red('No "scripts" found in package.json'));
   }
-} catch (error) {
-  console.error(error);
-  process.exit(1);
+
+  return packageJson.scripts;
 }
 
 function spawnScript(pkgManager, args) {
-  const spawn = spawnSync(pkgManager, args, { stdio: "inherit" });
+  const result = spawnSync(pkgManager, args, { stdio: "inherit" });
 
-  if (spawn.error) {
-    throw new Error(spawn.error);
+  if (result.error) {
+    throw result.error;
+  }
+
+  if (typeof result.status === "number" && result.status !== 0) {
+    process.exit(result.status);
   }
 }
 
 async function main(flags) {
   if (!flags.nowelcome) welcome();
 
-  const choices = Object.keys(packageJson.scripts);
+  const choices = Object.keys(getPackageScripts());
   const config = new Conf();
   const previous = config.get(`${process.cwd()}.previous`);
 
@@ -57,7 +58,7 @@ async function main(flags) {
       : await promptGetCommand(choices);
 
   const pkgManager = getPackageManager();
-  let args = !pkgManager === "npm" ? ["run", script] : [script];
+  let args = pkgManager === "npm" ? ["run", script] : [script];
   args = parameters ? [...args, parameters] : args;
 
   if (flags.clipboard) {
@@ -72,15 +73,24 @@ async function main(flags) {
 }
 
 async function runLocalScript(script) {
+  const scripts = getPackageScripts();
+
+  if (!scripts[script]) {
+    throw new Error(
+      chalk.red(`Script "${script}" not found in local package.json scripts.`),
+    );
+  }
+
   const pkgManager = getPackageManager();
-  const args = !pkgManager === "npm" ? ["run", script] : [script];
+  const args = pkgManager === "npm" ? ["run", script] : [script];
 
   spawnScript(pkgManager, args);
 }
 
 async function list() {
-  const packageJson = getPackageJson();
-  Object.entries(packageJson.scripts).forEach(([key, value]) => {
+  const scripts = getPackageScripts();
+
+  Object.entries(scripts).forEach(([key, value]) => {
     console.log(`· ${chalk.greenBright(key)}: ${value}`);
   });
 }
@@ -104,27 +114,17 @@ Examples
   $ scriptpal -lcn
   $ scriptpal --nowelcome
   $ npx scriptpal
-  $ scriptpal --last --preset="emoji"`
+  $ scriptpal start`,
   )
-  .action(async (options) => await main(options));
+  .argument("[script]")
+  .action(async (script, options) =>
+    script ? runLocalScript(script) : main(options),
+  );
 
 program
   .command("list")
   .description("List available scripts from package.json")
   .action(() => list());
-
-// console.log(packageJson.scripts);
-Object.keys(packageJson.scripts)
-  .filter((script) => !["list"].includes(script))
-  .forEach((script) => {
-    program
-      .usage("[global options] <file-paths>...")
-      .command(script)
-      .description(
-        `Runs local script "${script}" detected in local package.json`
-      )
-      .action(() => runLocalScript(script));
-  });
 
 (async () => {
   try {
