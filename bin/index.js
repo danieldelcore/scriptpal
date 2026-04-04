@@ -10,8 +10,15 @@ const { Command } = require("commander");
 const { version } = require("../package.json");
 const welcome = require("./welcome");
 const { getPackageJson } = require("./file-manager");
-const { promptShouldRerunPrevious, promptGetCommand } = require("./prompts");
+const {
+  promptShouldRerunPrevious,
+  promptGetCommand,
+  promptGetWildcardValue,
+  promptSelectBookmark,
+} = require("./prompts");
 const { getPackageManager } = require("./detect-pkg-manager");
+
+const BOOKMARKS_KEY = "bookmarks";
 
 function getPackageScripts() {
   const packageJson = getPackageJson();
@@ -35,11 +42,106 @@ function spawnScript(pkgManager, args) {
   }
 }
 
+function spawnShellCommand(command) {
+  const result = spawnSync(command, { stdio: "inherit", shell: true });
+
+  if (result.error) {
+    throw result.error;
+  }
+
+  if (typeof result.status === "number" && result.status !== 0) {
+    process.exit(result.status);
+  }
+}
+
+function getConfig() {
+  return new Conf();
+}
+
+function getBookmarks(config = getConfig()) {
+  return config.get(BOOKMARKS_KEY, {});
+}
+
+function getBookmark(name, config = getConfig()) {
+  return getBookmarks(config)[name];
+}
+
+function setBookmark(name, command, config = getConfig()) {
+  const bookmarks = getBookmarks(config);
+  bookmarks[name] = command;
+  config.set(BOOKMARKS_KEY, bookmarks);
+}
+
+function removeBookmark(name, config = getConfig()) {
+  const bookmarks = getBookmarks(config);
+
+  if (!bookmarks[name]) {
+    throw new Error(chalk.red(`Bookmark "${name}" not found.`));
+  }
+
+  delete bookmarks[name];
+  config.set(BOOKMARKS_KEY, bookmarks);
+  console.log(`Removed bookmark "${chalk.greenBright(name)}".`);
+}
+
+function extractWildcards(template) {
+  const variables = new Set();
+  const regex = /\$\{([a-zA-Z0-9_]+)\}/g;
+  let match;
+
+  while ((match = regex.exec(template)) !== null) {
+    variables.add(match[1]);
+  }
+
+  return [...variables];
+}
+
+function parseWildcardArgs(wildcardPairs = []) {
+  return wildcardPairs.reduce((values, pair) => {
+    const separatorIndex = pair.indexOf("=");
+
+    if (separatorIndex <= 0) {
+      throw new Error(
+        chalk.red(
+          `Invalid wildcard "${pair}". Expected format: name=value (e.g. package=core).`,
+        ),
+      );
+    }
+
+    const name = pair.slice(0, separatorIndex);
+    const value = pair.slice(separatorIndex + 1);
+
+    values[name] = value;
+    return values;
+  }, {});
+}
+
+async function resolveWildcards(command, wildcardPairs = []) {
+  const wildcardNames = extractWildcards(command);
+
+  if (wildcardNames.length === 0) {
+    return command;
+  }
+
+  const values = parseWildcardArgs(wildcardPairs);
+
+  for (const wildcardName of wildcardNames) {
+    if (!(wildcardName in values)) {
+      values[wildcardName] = await promptGetWildcardValue(wildcardName);
+    }
+  }
+
+  return command.replace(
+    /\$\{([a-zA-Z0-9_]+)\}/g,
+    (_, wildcardName) => values[wildcardName],
+  );
+}
+
 async function main(flags) {
   if (!flags.nowelcome) welcome();
 
   const choices = Object.keys(getPackageScripts());
-  const config = new Conf();
+  const config = getConfig();
   const previous = config.get(`${process.cwd()}.previous`);
 
   let shouldRerunPrevious = false;
@@ -67,6 +169,7 @@ async function main(flags) {
     return 0;
   }
 
+  // Persists previous command
   config.set(`${process.cwd()}.previous`, { script, parameters });
 
   spawnScript(pkgManager, args);
@@ -95,6 +198,78 @@ async function list() {
   });
 }
 
+async function listBookmarks() {
+  const bookmarks = getBookmarks();
+  const entries = Object.entries(bookmarks);
+
+  if (entries.length === 0) {
+    console.log("No bookmarks saved yet.");
+    return;
+  }
+
+  entries.forEach(([name, command]) => {
+    console.log(`· ${chalk.greenBright(name)}: ${command}`);
+  });
+}
+
+async function addBookmark(name, commandParts) {
+  const command = commandParts.join(" ").trim();
+
+  if (!command) {
+    throw new Error(chalk.red("Bookmark command cannot be empty."));
+  }
+
+  if (getBookmark(name)) {
+    throw new Error(
+      chalk.red(`Bookmark "${name}" already exists. Use edit to update it.`),
+    );
+  }
+
+  setBookmark(name, command);
+  console.log(`Saved bookmark "${chalk.greenBright(name)}".`);
+}
+
+async function editBookmark(name, commandParts) {
+  const command = commandParts.join(" ").trim();
+
+  if (!command) {
+    throw new Error(chalk.red("Bookmark command cannot be empty."));
+  }
+
+  if (!getBookmark(name)) {
+    throw new Error(
+      chalk.red(`Bookmark "${name}" not found. Use add to create it first.`),
+    );
+  }
+
+  setBookmark(name, command);
+  console.log(`Updated bookmark "${chalk.greenBright(name)}".`);
+}
+
+async function runBookmark(name, wildcardPairs = []) {
+  const command = getBookmark(name);
+
+  if (!command) {
+    throw new Error(chalk.red(`Bookmark "${name}" not found.`));
+  }
+
+  const resolvedCommand = await resolveWildcards(command, wildcardPairs);
+  spawnShellCommand(resolvedCommand);
+}
+
+async function pickAndRunBookmark() {
+  const bookmarks = getBookmarks();
+  const names = Object.keys(bookmarks);
+
+  if (names.length === 0) {
+    console.log("No bookmarks saved yet.");
+    return;
+  }
+
+  const selectedBookmark = await promptSelectBookmark(names);
+  await runBookmark(selectedBookmark);
+}
+
 const program = new Command();
 
 program
@@ -114,7 +289,9 @@ Examples
   $ scriptpal -lcn
   $ scriptpal --nowelcome
   $ npx scriptpal
-  $ scriptpal start`,
+  $ scriptpal start
+  $ scriptpal bookmark add testpkg "yarn test src/packages/\${package}"
+  $ scriptpal bookmark run testpkg package=ui-button`,
   )
   .argument("[script]")
   .action(async (script, options) =>
@@ -123,8 +300,48 @@ Examples
 
 program
   .command("list")
+  .alias("ls")
   .description("List available scripts from package.json")
   .action(() => list());
+
+const bookmarkCommand = program
+  .command("bookmark")
+  .description("Manage custom command bookmarks")
+  .action(() => pickAndRunBookmark());
+
+bookmarkCommand
+  .command("add")
+  .description("Add a bookmark")
+  .argument("<name>")
+  .argument("<command...>")
+  .action((name, commandParts) => addBookmark(name, commandParts));
+
+bookmarkCommand
+  .command("edit")
+  .description("Edit an existing bookmark")
+  .argument("<name>")
+  .argument("<command...>")
+  .action((name, commandParts) => editBookmark(name, commandParts));
+
+bookmarkCommand
+  .command("remove")
+  .alias("rm")
+  .description("Remove a bookmark")
+  .argument("<name>")
+  .action((name) => removeBookmark(name));
+
+bookmarkCommand
+  .command("list")
+  .alias("ls")
+  .description("List bookmarks")
+  .action(() => listBookmarks());
+
+bookmarkCommand
+  .command("run")
+  .description("Run a bookmark and resolve wildcard values")
+  .argument("<name>")
+  .argument("[wildcards...]")
+  .action((name, wildcardPairs) => runBookmark(name, wildcardPairs));
 
 (async () => {
   try {

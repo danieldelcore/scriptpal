@@ -1,5 +1,5 @@
 const chalk = require("chalk");
-const { AutoComplete, Snippet, Confirm } = require("enquirer");
+const { AutoComplete, Snippet, Confirm, Input } = require("enquirer");
 
 const promptShouldRerunPrevious = async (previous) => {
   const previousCommand = `${previous.script} ${
@@ -40,7 +40,23 @@ const promptGetCommand = async (choices) => {
   };
 };
 
+const promptGetWildcardValue = async (name) => {
+  return await new Input({
+    message: `Provide value for ${chalk.greenBright(name)}`,
+  }).run();
+};
+
+const promptSelectBookmark = async (bookmarks) => {
+  return await new AutoComplete({
+    message: "Which bookmark would you like to run? 🤷‍♂️",
+    limit: 18,
+    choices: bookmarks,
+  }).run();
+};
+
 module.exports = {
   promptShouldRerunPrevious,
   promptGetCommand,
+  promptGetWildcardValue,
+  promptSelectBookmark,
 };
