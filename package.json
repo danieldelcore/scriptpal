@@ -1,6 +1,6 @@
 {
   "name": "scriptpal",
-  "version": "1.4.5",
+  "version": "1.5.0",
   "description": "A simple npm script palette for lazy people (like me)",
   "main": "./bin/index.js",
   "bin": {
