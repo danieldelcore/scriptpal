@@ -13,6 +13,14 @@ const promptShouldRerunPrevious = async (previous) => {
   }).run();
 };
 
+const promptShouldRerunPreviousBookmark = async (command) => {
+  return await new Confirm({
+    message: `Would you like to rerun the previous bookmark command?\n${chalk.greenBright(
+      command
+    )}`,
+  }).run();
+};
+
 const promptGetCommand = async (choices) => {
   const script = await new AutoComplete({
     message: "Which script would you like to run? 🤷‍♂️",
@@ -56,6 +64,7 @@ const promptSelectBookmark = async (bookmarks) => {
 
 module.exports = {
   promptShouldRerunPrevious,
+  promptShouldRerunPreviousBookmark,
   promptGetCommand,
   promptGetWildcardValue,
   promptSelectBookmark,

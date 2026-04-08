@@ -12,6 +12,7 @@ const welcome = require("./welcome");
 const { getPackageJson } = require("./file-manager");
 const {
   promptShouldRerunPrevious,
+  promptShouldRerunPreviousBookmark,
   promptGetCommand,
   promptGetWildcardValue,
   promptSelectBookmark,
@@ -282,6 +283,19 @@ async function pickAndRunBookmark(options = {}) {
   if (options.last) {
     await runPreviousBookmark();
     return;
+  }
+
+  const previousBookmark = getPreviousBookmark();
+
+  if (previousBookmark) {
+    const shouldRerunPreviousBookmark = await promptShouldRerunPreviousBookmark(
+      previousBookmark.command,
+    );
+
+    if (shouldRerunPreviousBookmark) {
+      spawnShellCommand(previousBookmark.command);
+      return;
+    }
   }
 
   const bookmarks = getBookmarks();
