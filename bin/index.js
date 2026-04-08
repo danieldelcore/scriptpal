@@ -19,6 +19,7 @@ const {
 const { getPackageManager } = require("./detect-pkg-manager");
 
 const BOOKMARKS_KEY = "bookmarks";
+const BOOKMARK_PREVIOUS_KEY = "bookmark.previous";
 
 function getPackageScripts() {
   const packageJson = getPackageJson();
@@ -64,6 +65,14 @@ function getBookmarks(config = getConfig()) {
 
 function getBookmark(name, config = getConfig()) {
   return getBookmarks(config)[name];
+}
+
+function getPreviousBookmark(config = getConfig()) {
+  return config.get(BOOKMARK_PREVIOUS_KEY);
+}
+
+function setPreviousBookmark(command, config = getConfig()) {
+  config.set(BOOKMARK_PREVIOUS_KEY, { command });
 }
 
 function setBookmark(name, command, config = getConfig()) {
@@ -254,10 +263,27 @@ async function runBookmark(name, wildcardPairs = []) {
   }
 
   const resolvedCommand = await resolveWildcards(command, wildcardPairs);
+  setPreviousBookmark(resolvedCommand);
   spawnShellCommand(resolvedCommand);
 }
 
-async function pickAndRunBookmark() {
+async function runPreviousBookmark() {
+  const previousBookmark = getPreviousBookmark();
+
+  if (!previousBookmark) {
+    console.log("Previous bookmark command not found.");
+    return;
+  }
+
+  spawnShellCommand(previousBookmark.command);
+}
+
+async function pickAndRunBookmark(options = {}) {
+  if (options.last) {
+    await runPreviousBookmark();
+    return;
+  }
+
   const bookmarks = getBookmarks();
   const names = Object.keys(bookmarks);
 
@@ -290,6 +316,7 @@ Examples
   $ scriptpal --nowelcome
   $ npx scriptpal
   $ scriptpal start
+  $ scriptpal bookmark --last
   $ scriptpal bookmark add testpkg "yarn test src/packages/\${package}"
   $ scriptpal bookmark run testpkg package=ui-button`,
   )
@@ -307,7 +334,16 @@ program
 const bookmarkCommand = program
   .command("bookmark")
   .description("Manage custom command bookmarks")
-  .action(() => pickAndRunBookmark());
+  .option("-l, --last", "Run previous bookmark command")
+  .addHelpText(
+    "after",
+    `
+Examples
+  $ scriptpal bookmark
+  $ scriptpal bookmark --last
+  $ scriptpal bookmark run testpkg package=ui-button`,
+  )
+  .action((options) => pickAndRunBookmark(options));
 
 bookmarkCommand
   .command("add")
