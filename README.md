@@ -48,6 +48,7 @@ npx scriptpal
 - `bookmark remove <name>`, `bookmark rm <name>` Remove a bookmark
 - `bookmark list`, `bookmark ls` List bookmarks
 - `bookmark run <name> [name=value ...]` Run a bookmark and resolve wildcards
+- `bookmark --last`, `bookmark -l` Run previous bookmark command
 - `bookmark` Open a fuzzy-findable bookmark picker and run selection
 
 ## Running Arbitrary Scripts
@@ -75,6 +76,7 @@ If a required wildcard is not provided, ScriptPal prompts for it.
 - `$ scriptpal start` => Runs `npm run start`. Can be used with other scripts as well.
 - `$ scriptpal bookmark add testpkg "yarn test src/packages/${package}"` => Saves a bookmark.
 - `$ scriptpal bookmark run testpkg package=ui-button` => Runs `yarn test src/packages/ui-button`.
+- `$ scriptpal bookmark --last` => Runs the last executed bookmark command.
 - `$ scriptpal bookmark ls` => Lists bookmarks.
 - `$ scriptpal bookmark` => Opens fuzzy picker for saved bookmarks and runs selected one.
 
