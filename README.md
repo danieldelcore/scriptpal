@@ -67,6 +67,9 @@ Store reusable command bookmarks globally.
 
 Wildcards use `${name}` syntax and are resolved when running bookmarks.
 If a required wildcard is not provided, ScriptPal prompts for it.
+When passing wildcard values via CLI, use `name=value` pairs with non-empty names and values.
+
+Bookmark names must be non-empty and cannot be `__proto__`, `prototype`, or `constructor`.
 
 ## Examples
 
