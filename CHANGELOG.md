@@ -1,5 +1,11 @@
 # scriptpal
 
+## 1.6.1
+
+### Patch Changes
+
+- a94dbcd: Add bookmark help examples that show how to preserve wildcard placeholders using single quotes or escaped dollar signs in double quotes.
+
 ## 1.6.0
 
 ### Minor Changes
