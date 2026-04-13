@@ -331,7 +331,8 @@ Examples
   $ npx scriptpal
   $ scriptpal start
   $ scriptpal bookmark --last
-  $ scriptpal bookmark add testpkg "yarn test src/packages/\${package}"
+  $ scriptpal bookmark add testpkg 'yarn test src/packages/\${package}'
+  $ scriptpal bookmark add testpkg "yarn test src/packages/\\\${package}"
   $ scriptpal bookmark run testpkg package=ui-button`,
   )
   .argument("[script]")
@@ -355,6 +356,8 @@ const bookmarkCommand = program
 Examples
   $ scriptpal bookmark
   $ scriptpal bookmark --last
+  $ scriptpal bookmark add testpkg 'yarn test src/packages/\${package}'
+  $ scriptpal bookmark add testpkg "yarn test src/packages/\\\${package}"
   $ scriptpal bookmark run testpkg package=ui-button`,
   )
   .action((options) => pickAndRunBookmark(options));
