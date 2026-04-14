@@ -61,7 +61,13 @@ function getConfig() {
 }
 
 function getBookmarks(config = getConfig()) {
-  return config.get(BOOKMARKS_KEY, {});
+  const bookmarks = config.get(BOOKMARKS_KEY, {});
+
+  if (!bookmarks || typeof bookmarks !== "object" || Array.isArray(bookmarks)) {
+    return {};
+  }
+
+  return bookmarks;
 }
 
 function getBookmark(name, config = getConfig()) {
@@ -77,13 +83,13 @@ function setPreviousBookmark(command, config = getConfig()) {
 }
 
 function setBookmark(name, command, config = getConfig()) {
-  const bookmarks = getBookmarks(config);
+  const bookmarks = { ...getBookmarks(config) };
   bookmarks[name] = command;
   config.set(BOOKMARKS_KEY, bookmarks);
 }
 
 function removeBookmark(name, config = getConfig()) {
-  const bookmarks = getBookmarks(config);
+  const bookmarks = { ...getBookmarks(config) };
 
   if (!bookmarks[name]) {
     throw new Error(chalk.red(`Bookmark "${name}" not found.`));
@@ -120,10 +126,41 @@ function parseWildcardArgs(wildcardPairs = []) {
 
     const name = pair.slice(0, separatorIndex);
     const value = pair.slice(separatorIndex + 1);
+    const normalizedName = name.trim();
 
-    values[name] = value;
+    if (!normalizedName) {
+      throw new Error(
+        chalk.red(
+          `Invalid wildcard "${pair}". Wildcard name cannot be empty.`,
+        ),
+      );
+    }
+
+    if (value.length === 0) {
+      throw new Error(
+        chalk.red(
+          `Invalid wildcard "${pair}". Wildcard value cannot be empty.`,
+        ),
+      );
+    }
+
+    values[normalizedName] = value;
     return values;
   }, {});
+}
+
+function isValidBookmarkName(name) {
+  if (!name || typeof name !== "string") {
+    return false;
+  }
+
+  const normalized = name.trim();
+
+  if (!normalized) {
+    return false;
+  }
+
+  return !["__proto__", "prototype", "constructor"].includes(normalized);
 }
 
 async function resolveWildcards(command, wildcardPairs = []) {
@@ -223,6 +260,10 @@ async function listBookmarks() {
 }
 
 async function addBookmark(name, commandParts) {
+  if (!isValidBookmarkName(name)) {
+    throw new Error(chalk.red("Invalid bookmark name."));
+  }
+
   const command = commandParts.join(" ").trim();
 
   if (!command) {
@@ -240,6 +281,10 @@ async function addBookmark(name, commandParts) {
 }
 
 async function editBookmark(name, commandParts) {
+  if (!isValidBookmarkName(name)) {
+    throw new Error(chalk.red("Invalid bookmark name."));
+  }
+
   const command = commandParts.join(" ").trim();
 
   if (!command) {
