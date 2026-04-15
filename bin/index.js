@@ -18,6 +18,12 @@ const {
   promptSelectBookmark,
 } = require("./prompts");
 const { getPackageManager } = require("./detect-pkg-manager");
+const {
+  extractWildcardDescriptors,
+  getUniqueWildcardNames,
+  parseWildcardArgs,
+  resolveWildcardTemplate,
+} = require("./wildcards");
 
 const BOOKMARKS_KEY = "bookmarks";
 const BOOKMARK_PREVIOUS_KEY = "bookmark.previous";
@@ -94,40 +100,9 @@ function removeBookmark(name, config = getConfig()) {
   console.log(`Removed bookmark "${chalk.greenBright(name)}".`);
 }
 
-function extractWildcards(template) {
-  const variables = new Set();
-  const regex = /\$\{([a-zA-Z0-9_]+)\}/g;
-  let match;
-
-  while ((match = regex.exec(template)) !== null) {
-    variables.add(match[1]);
-  }
-
-  return [...variables];
-}
-
-function parseWildcardArgs(wildcardPairs = []) {
-  return wildcardPairs.reduce((values, pair) => {
-    const separatorIndex = pair.indexOf("=");
-
-    if (separatorIndex <= 0) {
-      throw new Error(
-        chalk.red(
-          `Invalid wildcard "${pair}". Expected format: name=value (e.g. package=core).`,
-        ),
-      );
-    }
-
-    const name = pair.slice(0, separatorIndex);
-    const value = pair.slice(separatorIndex + 1);
-
-    values[name] = value;
-    return values;
-  }, {});
-}
-
 async function resolveWildcards(command, wildcardPairs = []) {
-  const wildcardNames = extractWildcards(command);
+  const descriptors = extractWildcardDescriptors(command);
+  const wildcardNames = getUniqueWildcardNames(descriptors);
 
   if (wildcardNames.length === 0) {
     return command;
@@ -141,10 +116,7 @@ async function resolveWildcards(command, wildcardPairs = []) {
     }
   }
 
-  return command.replace(
-    /\$\{([a-zA-Z0-9_]+)\}/g,
-    (_, wildcardName) => values[wildcardName],
-  );
+  return resolveWildcardTemplate(command, values);
 }
 
 async function main(flags) {
@@ -332,8 +304,10 @@ Examples
   $ scriptpal start
   $ scriptpal bookmark --last
   $ scriptpal bookmark add testpkg 'yarn test src/packages/\${package}'
-  $ scriptpal bookmark add testpkg "yarn test src/packages/\\\${package}"
-  $ scriptpal bookmark run testpkg package=ui-button`,
+  $ scriptpal bookmark add testpkg "yarn test src/packages/\${package}"
+  $ scriptpal bookmark run testpkg package=ui-button
+  $ scriptpal bookmark add typecheck "yarn typecheck packages/\${pkg:array:or:enum(button|modal|card)}"
+  $ scriptpal bookmark run typecheck pkg=button,modal`,
   )
   .argument("[script]")
   .action(async (script, options) =>
@@ -392,6 +366,39 @@ bookmarkCommand
 bookmarkCommand
   .command("run")
   .description("Run a bookmark and resolve wildcard values")
+  .addHelpText(
+    "after",
+    `
+Wildcard syntax
+  Scalar wildcard:
+    \${name}
+
+  Enum-constrained scalar:
+    \${name:enum(button|modal|card)}
+
+  Array wildcard (default render mode is csv):
+    \${name:array}
+    \${name:array:or}
+    \${name:array:brace}
+    \${name:array:space}
+    \${name:array:csv}
+
+  Enum-constrained arrays:
+    \${name:array:or:enum(button|modal|card)}
+
+Array input formats
+  name=button
+  name=button,modal
+  name=button|modal
+  name=[button,modal]
+  name=(button|modal)
+
+Array render modes
+  :or    => (a|b)
+  :brace => {a,b}
+  :space => a b
+  :csv   => a,b`,
+  )
   .argument("<name>")
   .argument("[wildcards...]")
   .action((name, wildcardPairs) => runBookmark(name, wildcardPairs));
