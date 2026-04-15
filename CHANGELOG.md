@@ -1,5 +1,11 @@
 # scriptpal
 
+## 1.7.0
+
+### Minor Changes
+
+- 3ea6f5d: Add support for enum and array bookmark wildcards, expanded array input formats, wildcard enum validation, and corresponding README/CLI help, tests, and PR test workflow updates.
+
 ## 1.6.1
 
 ### Patch Changes
