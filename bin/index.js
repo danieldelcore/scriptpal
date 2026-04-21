@@ -24,6 +24,7 @@ const {
   parseWildcardArgs,
   resolveWildcardTemplate,
 } = require("./wildcards");
+const { sortBookmarksByName } = require("./bookmarks");
 
 const BOOKMARKS_KEY = "bookmarks";
 const BOOKMARK_PREVIOUS_KEY = "bookmark.previous";
@@ -182,7 +183,7 @@ async function list() {
 
 async function listBookmarks() {
   const bookmarks = getBookmarks();
-  const entries = Object.entries(bookmarks);
+  const entries = sortBookmarksByName(Object.entries(bookmarks));
 
   if (entries.length === 0) {
     console.log("No bookmarks saved yet.");
@@ -271,7 +272,9 @@ async function pickAndRunBookmark(options = {}) {
   }
 
   const bookmarks = getBookmarks();
-  const names = Object.keys(bookmarks);
+  const names = sortBookmarksByName(Object.entries(bookmarks)).map(
+    ([name]) => name,
+  );
 
   if (names.length === 0) {
     console.log("No bookmarks saved yet.");
