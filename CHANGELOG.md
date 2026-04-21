@@ -1,5 +1,11 @@
 # scriptpal
 
+## 1.7.1
+
+### Patch Changes
+
+- 0996c36: Sort bookmark names alphabetically when listing bookmarks and in the interactive bookmark picker.
+
 ## 1.7.0
 
 ### Minor Changes
