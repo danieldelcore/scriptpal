@@ -1,5 +1,18 @@
 # scriptpal
 
+## 1.8.0
+
+### Minor Changes
+
+- c414d0d: Add opt-in `bookmark add/edit --exec` to preserve argument boundaries and substitute wildcard values without shell interpretation. Existing string bookmarks retain their behavior, with explicit `--shell` available for shell commands.
+
+  Add `--preview` to inspect resolved commands without execution or history updates. Preserve exec arguments when rerunning bookmarks, support separate arguments for whole-argument `:array:space` wildcards, and correct template quoting in documentation and help.
+
+### Patch Changes
+
+- c414d0d: Run explicitly named bookmarks with `scriptpal bookmark <name> [name=value ...]` instead of ignoring the arguments and prompting to rerun the previous bookmark.
+- c414d0d: Expand Vitest coverage for CLI commands, interactive flows, bookmark management, wildcard validation, package discovery, package-manager detection, and error handling.
+
 ## 1.7.1
 
 ### Patch Changes
