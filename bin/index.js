@@ -23,8 +23,13 @@ const {
   getUniqueWildcardNames,
   parseWildcardArgs,
   resolveWildcardTemplate,
+  resolveWildcardArguments,
 } = require("./wildcards");
-const { sortBookmarksByName } = require("./bookmarks");
+const {
+  createBookmark,
+  formatBookmark,
+  sortBookmarksByName,
+} = require("./bookmarks");
 
 const BOOKMARKS_KEY = "bookmarks";
 const BOOKMARK_PREVIOUS_KEY = "bookmark.previous";
@@ -102,7 +107,10 @@ function removeBookmark(name, config = getConfig()) {
 }
 
 async function resolveWildcards(command, wildcardPairs = []) {
-  const descriptors = extractWildcardDescriptors(command);
+  const isExec = typeof command !== "string";
+  const descriptors = isExec
+    ? command.args.flatMap(extractWildcardDescriptors)
+    : extractWildcardDescriptors(command);
   const wildcardNames = getUniqueWildcardNames(descriptors);
 
   if (wildcardNames.length === 0) {
@@ -112,12 +120,19 @@ async function resolveWildcards(command, wildcardPairs = []) {
   const values = parseWildcardArgs(wildcardPairs);
 
   for (const wildcardName of wildcardNames) {
-    if (!(wildcardName in values)) {
-      values[wildcardName] = await promptGetWildcardValue(wildcardName);
+    if (!Object.prototype.hasOwnProperty.call(values, wildcardName)) {
+      Object.defineProperty(values, wildcardName, {
+        value: await promptGetWildcardValue(wildcardName),
+        enumerable: true,
+        configurable: true,
+        writable: true,
+      });
     }
   }
 
-  return resolveWildcardTemplate(command, values);
+  return isExec
+    ? { ...command, args: resolveWildcardArguments(command.args, values) }
+    : resolveWildcardTemplate(command, values);
 }
 
 async function main(flags) {
@@ -191,16 +206,12 @@ async function listBookmarks() {
   }
 
   entries.forEach(([name, command]) => {
-    console.log(`· ${chalk.greenBright(name)}: ${command}`);
+    console.log(`· ${chalk.greenBright(name)}: ${formatBookmark(command)}`);
   });
 }
 
-async function addBookmark(name, commandParts) {
-  const command = commandParts.join(" ").trim();
-
-  if (!command) {
-    throw new Error(chalk.red("Bookmark command cannot be empty."));
-  }
+async function addBookmark(name, commandParts, options = {}) {
+  const command = createBookmark(commandParts, options);
 
   if (getBookmark(name)) {
     throw new Error(
@@ -212,14 +223,14 @@ async function addBookmark(name, commandParts) {
   console.log(`Saved bookmark "${chalk.greenBright(name)}".`);
 }
 
-async function editBookmark(name, commandParts) {
-  const command = commandParts.join(" ").trim();
+async function editBookmark(name, commandParts, options = {}) {
+  const existing = getBookmark(name);
+  const mode = !options.exec && !options.shell && existing?.mode === "exec"
+    ? { exec: true }
+    : options;
+  const command = createBookmark(commandParts, mode);
 
-  if (!command) {
-    throw new Error(chalk.red("Bookmark command cannot be empty."));
-  }
-
-  if (!getBookmark(name)) {
+  if (!existing) {
     throw new Error(
       chalk.red(`Bookmark "${name}" not found. Use add to create it first.`),
     );
@@ -229,7 +240,28 @@ async function editBookmark(name, commandParts) {
   console.log(`Updated bookmark "${chalk.greenBright(name)}".`);
 }
 
-async function runBookmark(name, wildcardPairs = []) {
+function executeBookmark(command, options = {}) {
+  if (options.preview) {
+    console.log(
+      typeof command === "string" ? `[shell] ${command}` : formatBookmark(command),
+    );
+    return;
+  }
+  if (typeof command === "string") {
+    spawnShellCommand(command);
+  } else {
+    const result = spawnSync(command.executable, command.args, {
+      stdio: "inherit",
+      shell: false,
+    });
+    if (result.error) throw result.error;
+    if (typeof result.status === "number" && result.status !== 0) {
+      process.exit(result.status);
+    }
+  }
+}
+
+async function runBookmark(name, wildcardPairs = [], options = {}) {
   const command = getBookmark(name);
 
   if (!command) {
@@ -237,11 +269,11 @@ async function runBookmark(name, wildcardPairs = []) {
   }
 
   const resolvedCommand = await resolveWildcards(command, wildcardPairs);
-  setPreviousBookmark(resolvedCommand);
-  spawnShellCommand(resolvedCommand);
+  if (!options.preview) setPreviousBookmark(resolvedCommand);
+  executeBookmark(resolvedCommand, options);
 }
 
-async function runPreviousBookmark() {
+async function runPreviousBookmark(options = {}) {
   const previousBookmark = getPreviousBookmark();
 
   if (!previousBookmark) {
@@ -249,12 +281,12 @@ async function runPreviousBookmark() {
     return;
   }
 
-  spawnShellCommand(previousBookmark.command);
+  executeBookmark(previousBookmark.command, options);
 }
 
 async function pickAndRunBookmark(options = {}) {
   if (options.last) {
-    await runPreviousBookmark();
+    await runPreviousBookmark(options);
     return;
   }
 
@@ -262,11 +294,11 @@ async function pickAndRunBookmark(options = {}) {
 
   if (previousBookmark) {
     const shouldRerunPreviousBookmark = await promptShouldRerunPreviousBookmark(
-      previousBookmark.command,
+      formatBookmark(previousBookmark.command),
     );
 
     if (shouldRerunPreviousBookmark) {
-      spawnShellCommand(previousBookmark.command);
+      executeBookmark(previousBookmark.command, options);
       return;
     }
   }
@@ -282,7 +314,7 @@ async function pickAndRunBookmark(options = {}) {
   }
 
   const selectedBookmark = await promptSelectBookmark(names);
-  await runBookmark(selectedBookmark);
+  await runBookmark(selectedBookmark, [], options);
 }
 
 const program = new Command();
@@ -306,10 +338,12 @@ Examples
   $ npx scriptpal
   $ scriptpal start
   $ scriptpal bookmark --last
-  $ scriptpal bookmark add testpkg 'yarn test src/packages/\${package}'
-  $ scriptpal bookmark add testpkg "yarn test src/packages/\${package}"
+  $ scriptpal bookmark testpkg package=ui-button
+  $ scriptpal bookmark testpkg --preview package=ui-button
+  $ scriptpal bookmark add --exec testpkg -- yarn test 'src/packages/\${package}'
+  $ scriptpal bookmark add --shell pipeline 'printf hello | cat'
   $ scriptpal bookmark run testpkg package=ui-button
-  $ scriptpal bookmark add typecheck "yarn typecheck packages/\${pkg:array:or:enum(button|modal|card)}"
+  $ scriptpal bookmark add --exec typecheck -- yarn typecheck 'packages/\${pkg:array:or:enum(button|modal|card)}'
   $ scriptpal bookmark run typecheck pkg=button,modal`,
   )
   .argument("[script]")
@@ -327,31 +361,42 @@ const bookmarkCommand = program
   .command("bookmark")
   .description("Manage custom command bookmarks")
   .option("-l, --last", "Run previous bookmark command")
+  .option("--preview", "Show the resolved command without executing or saving history")
+  .argument("[name]", "Bookmark to run (omit to open the picker)")
+  .argument("[wildcards...]", "Wildcard values in name=value format")
   .addHelpText(
     "after",
     `
 Examples
   $ scriptpal bookmark
   $ scriptpal bookmark --last
-  $ scriptpal bookmark add testpkg 'yarn test src/packages/\${package}'
-  $ scriptpal bookmark add testpkg "yarn test src/packages/\\\${package}"
+  $ scriptpal bookmark testpkg package=ui-button
+  $ scriptpal bookmark testpkg --preview package=ui-button
+  $ scriptpal bookmark add --exec testpkg -- yarn test 'src/packages/\${package}'
+  $ scriptpal bookmark add --shell pipeline 'printf hello | cat'
   $ scriptpal bookmark run testpkg package=ui-button`,
   )
-  .action((options) => pickAndRunBookmark(options));
+  .action((name, wildcardPairs, options) =>
+    name ? runBookmark(name, wildcardPairs, options) : pickAndRunBookmark(options),
+  );
 
 bookmarkCommand
   .command("add")
+  .option("--exec", "Preserve arguments and run without a shell (use -- before the executable)")
+  .option("--shell", "Save shell command text (the legacy default)")
   .description("Add a bookmark")
   .argument("<name>")
   .argument("<command...>")
-  .action((name, commandParts) => addBookmark(name, commandParts));
+  .action((name, commandParts, options) => addBookmark(name, commandParts, options));
 
 bookmarkCommand
   .command("edit")
+  .option("--exec", "Preserve arguments and run without a shell (use -- before the executable)")
+  .option("--shell", "Save shell command text (the legacy default)")
   .description("Edit an existing bookmark")
   .argument("<name>")
   .argument("<command...>")
-  .action((name, commandParts) => editBookmark(name, commandParts));
+  .action((name, commandParts, options) => editBookmark(name, commandParts, options));
 
 bookmarkCommand
   .command("remove")
@@ -368,6 +413,7 @@ bookmarkCommand
 
 bookmarkCommand
   .command("run")
+  .option("--preview", "Show the resolved command without executing or saving history")
   .description("Run a bookmark and resolve wildcard values")
   .addHelpText(
     "after",
@@ -404,7 +450,9 @@ Array render modes
   )
   .argument("<name>")
   .argument("[wildcards...]")
-  .action((name, wildcardPairs) => runBookmark(name, wildcardPairs));
+  .action((name, wildcardPairs, options) =>
+    runBookmark(name, wildcardPairs, { ...bookmarkCommand.opts(), ...options }),
+  );
 
 (async () => {
   try {

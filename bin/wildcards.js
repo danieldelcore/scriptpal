@@ -131,7 +131,9 @@ function parseWildcardArgs(wildcardPairs = []) {
       );
     }
 
-    values[name] = value;
+    Object.defineProperty(values, name, {
+      value, enumerable: true, configurable: true, writable: true,
+    });
     return values;
   }, {});
 }
@@ -179,9 +181,9 @@ function validateEnum(descriptor, values) {
   }
 }
 
-function renderResolvedValue(descriptor, inputValue) {
+function renderResolvedValue(descriptor, inputValue, preserveWhitespace = false) {
   if (!descriptor.isArray) {
-    const scalarValue = inputValue.trim();
+    const scalarValue = preserveWhitespace ? inputValue : inputValue.trim();
     validateEnum(descriptor, [scalarValue]);
     return scalarValue;
   }
@@ -211,6 +213,31 @@ function resolveWildcardTemplate(command, values) {
   });
 }
 
+function resolveWildcardArguments(args, values) {
+  return args.flatMap((arg) => {
+    const descriptors = extractWildcardDescriptors(arg);
+    const spaceArray = descriptors.find(
+      (descriptor) => descriptor.isArray && descriptor.arrayMode === "space",
+    );
+
+    if (spaceArray) {
+      if (arg !== `\${${spaceArray.raw}}`) {
+        throw new Error(
+          `Wildcard "${spaceArray.name}" with :array:space must occupy a whole argument in --exec mode.`,
+        );
+      }
+      // Validate emptiness and enum constraints before returning individual items.
+      renderResolvedValue(spaceArray, values[spaceArray.name]);
+      return parseArrayInput(values[spaceArray.name]);
+    }
+
+    return [arg.replace(/\$\{([^}]+)\}/g, (_, spec) => {
+      const descriptor = parseWildcardSpec(spec);
+      return renderResolvedValue(descriptor, values[descriptor.name], true);
+    })];
+  });
+}
+
 module.exports = {
   ARRAY_RENDERERS,
   extractWildcardDescriptors,
@@ -220,4 +247,5 @@ module.exports = {
   parseArrayInput,
   renderResolvedValue,
   resolveWildcardTemplate,
+  resolveWildcardArguments,
 };
