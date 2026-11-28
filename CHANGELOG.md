@@ -1,5 +1,11 @@
 # scriptpal
 
+## 1.8.1
+
+### Patch Changes
+
+- 18739ff: Exit quietly with status 130 when Ctrl+C cancels an interactive prompt.
+
 ## 1.8.0
 
 ### Minor Changes
