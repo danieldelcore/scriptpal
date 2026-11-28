@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import { loadCommonJs } from "./helpers/load-commonjs.mjs";
 
+const { PromptInterrupted } = loadCommonJs("prompts.js").exports;
+
 async function run(args = [], options = {}) {
   const store = new Map(Object.entries(options.store ?? {}));
   class Conf {
@@ -14,6 +16,7 @@ async function run(args = [], options = {}) {
   const exit = vi.fn();
   const welcome = vi.fn();
   const prompts = {
+    PromptInterrupted,
     promptShouldRerunPrevious: vi.fn(async () => options.rerun ?? false),
     promptShouldRerunPreviousBookmark: vi.fn(async () => options.rerun ?? false),
     promptGetCommand: vi.fn(async () => options.selection ?? { script: "test", parameters: "" }),

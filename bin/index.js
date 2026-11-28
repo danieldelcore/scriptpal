@@ -11,6 +11,7 @@ const { version } = require("../package.json");
 const welcome = require("./welcome");
 const { getPackageJson } = require("./file-manager");
 const {
+  PromptInterrupted,
   promptShouldRerunPrevious,
   promptShouldRerunPreviousBookmark,
   promptGetCommand,
@@ -458,6 +459,7 @@ Array render modes
   try {
     await program.parseAsync(process.argv);
   } catch (error) {
+    if (error instanceof PromptInterrupted) process.exit(130);
     console.error(chalk.red(error));
     process.exit(1);
   }

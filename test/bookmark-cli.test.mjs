@@ -10,6 +10,10 @@ let configDir;
 
 // Exercise the real CLI and shell commands with an isolated Conf store.
 function cli(...args) {
+  return cliWithInput("", ...args);
+}
+
+function cliWithInput(input, ...args) {
   const result = spawnSync(process.execPath, ["-e", `
     const Conf = require("conf");
     require.cache[require.resolve("conf")] = { exports: class extends Conf {
@@ -20,7 +24,7 @@ function cli(...args) {
   `, "--", ...args], {
     cwd: root,
     env: { ...process.env, SCRIPTPAL_TEST_CONFIG: configDir },
-    input: "",
+    input,
     encoding: "utf8",
     timeout: 5000,
   });
@@ -74,6 +78,17 @@ describe("bookmark CLI routing", () => {
 
   it("still offers to rerun when no bookmark name is supplied", () => {
     expect(cli("bookmark").stdout).toContain("rerun the previous bookmark command?");
+  });
+
+  it.each([
+    [["bookmark"], "rerun the previous bookmark command?"],
+    [["bookmark", "my-bookmark"], "Provide value for"],
+  ])("exits quietly when Ctrl+C cancels %j", (args, prompt) => {
+    const result = cliWithInput("\x03", ...args);
+    expect(result.stdout).toContain(prompt);
+    expect(result.stderr).toBe("");
+    expect(result.status).toBe(130);
+    expect(cli("bookmark", "--last").stdout.trim()).toBe("previous-output");
   });
 });
 
